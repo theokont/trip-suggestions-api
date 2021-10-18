@@ -22,10 +22,17 @@ public class CityNameController {
         this.amadeusApiService = amadeusApiService;
     }
 
-    @GetMapping("/api/destination-address/{city}")
+    /**
+     * Get the address from the given city code.
+     *
+     * @param cityCode The city code. Max length = 3.
+     * @return Returns an Address object that contains the address details of the city.
+     * @throws ResponseException A custom generic Amadeus error.
+     */
+    @GetMapping("/api/destination-address/{cityCode}")
     @CrossOrigin(origins = "http://localhost:3000")
-    public Address getCityName(@PathVariable String city) throws ResponseException {
-        Address address =  amadeusApiService.getCityName(city);
+    public Address getCityName(@PathVariable String cityCode) throws ResponseException {
+        Address address =  amadeusApiService.getCityName(cityCode);
         if (address == null) {
             throw new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Location not found"
