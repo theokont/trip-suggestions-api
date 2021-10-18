@@ -20,12 +20,18 @@ public class FlightOfferController {
         this.amadeusApiService = amadeusApiService;
     }
 
-    // @GetMapping("/api/flight-offer-search?origin={origin}&destination={destination}")
-    // public void getFlightOffers(@RequestParam("origin") String origin, @RequestParam("destination") String destination) throws ResponseException {
-    //     System.out.println(origin);
-    //     System.out.println(destination);
-    // }
-
+    /**
+     * Get the cheapest flight recommendations and prices on a given journey.
+     *
+     * @param origin The origin location code.
+     * @param destination The destination location code.
+     * @param departureDate The departure date in YYYY-MM-DD format.
+     * @param returnDate The return date in YYYY-MM-DD format.
+     * @param adults The amount of adult passengers.
+     * @param max The max number of results.
+     * @return Returns an array of FlightOfferSearch objects that contain all the relevant information about the cheapest flight
+     * @throws ResponseException A custom generic Amadeus error.
+     */
     @GetMapping("/api/flight-offer-search")
     @CrossOrigin(origins = "http://localhost:3000")
     public FlightOfferSearch[] getFlightOffers(@RequestParam("origin") String origin, @RequestParam("destination") String destination, @RequestParam("departureDate") String departureDate,

@@ -21,6 +21,13 @@ public class PointsOfInterestController {
         this.amadeusApiService = amadeusApiService;
     }
 
+    /**
+     * Gets the points of interest for a given destination.
+     * @param destination The city name.
+     * @param countryCode The country code of the city name.
+     * @return Returns an array of PointOfInterest objects.
+     * @throws ResponseException
+     */
     @GetMapping("/api/points-of-interest")
     @CrossOrigin(origins = "http://localhost:3000")
     public PointOfInterest[] getPointsOfInterest(@RequestParam("destination") String destination, @RequestParam("countryCode") String countryCode) throws ResponseException {

@@ -20,6 +20,14 @@ public class CheapestDatesController {
         this.amadeusApiService = amadeusApiService;
     }
 
+    /**
+     * Get the cheapest dates for a flight to a given city or airport.
+     *
+     * @param origin The origin city code. Maximum length = 3.
+     * @param destination The destination city code. Maximum length = 3.
+     * @return Returns an array of FlightDate objects.
+     * @throws ResponseException A custom generic Amadeus error.
+     */
     @GetMapping("/api/cheapest-date-search/origin={origin}?destination={destination}")
     @CrossOrigin(origins = "http://localhost:3000")
     public FlightDate[] searchCheapestDates(@PathVariable String origin, @PathVariable String destination) throws ResponseException {

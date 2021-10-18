@@ -20,7 +20,7 @@ public class MostBookedDestinationsController {
         this.amadeusApiService = amadeusApiService;
     }
     /**
-     * Gets the most booked destinations for the previous month.
+     * Get the most booked destinations for the previous month.
      * 
      * @param origin The origin from which to look for destinations 
      * @return A list of the most booked destinations.
