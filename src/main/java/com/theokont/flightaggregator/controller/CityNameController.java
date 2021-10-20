@@ -32,7 +32,7 @@ public class CityNameController {
     @GetMapping("/api/destination-address/{cityCode}")
     @CrossOrigin(origins = "http://localhost:3000")
     public Address getCityName(@PathVariable String cityCode) throws ResponseException {
-        Address address =  amadeusApiService.getCityName(cityCode);
+        Address address =  amadeusApiService.getAddress(cityCode);
         if (address == null) {
             throw new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Location not found"

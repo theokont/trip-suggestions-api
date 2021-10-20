@@ -19,13 +19,12 @@ import com.amadeus.resources.FlightOfferSearch;
 import com.amadeus.resources.Location;
 import com.amadeus.resources.Location.Address;
 import com.amadeus.resources.Location.GeoCode;
+import com.theokont.flightaggregator.model.Destination;
 import com.theokont.flightaggregator.model.RankedDestinationPair;
 
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
-@Primary
+@Service
 public class AmadeusApiService {
     
     Amadeus amadeus;
@@ -44,31 +43,80 @@ public class AmadeusApiService {
      * @return Returns an array of AirTraffic objects that contains the most booked destinations.
      * @throws ResponseException A custom generic Amadeus error.
      */
-    public AirTraffic[] getMostBookedDestinations(String originCityCode, String period) throws ResponseException {
-        // TODO: get airport id
+    public Destination[] getMostBookedDestinations(String originCityCode, String period) throws ResponseException {
         AirTraffic[] mostBookedDestinations = amadeus.travel.analytics.airTraffic.booked.get(Params
             .with("originCityCode", getAirportName(originCityCode))
             .and("period", period));
+
+        // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
+
+        Destination[] destinations = Arrays.stream(mostBookedDestinations)
+            .map(airTraffic -> {
+                String cityName = "";
+                String countryCode = "";
+                Address address = getAddress(airTraffic.getDestination());
+                cityName = (address != null) ? address.getCityName() : "";
+                countryCode = (address != null) ? address.getCountryCode() : "";
+                
+                // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+
+                return new Destination(airTraffic.getDestination(), cityName, countryCode);
+            })
+            .toArray(Destination[]::new);
         
-        return mostBookedDestinations;
+        return destinations;
     }
 
     /**
-     * Get the most booked destinations given an origin for a certain time period.
+     * Get the most booked destinations given an origin for the current month 4 years ago (Test environment does not offer recent data).
      *
      * @param originCityCode The city code. Maximum length = 3.
      * @return Returns an array of AirTraffic objects that contains the most booked destinations.
      * @throws ResponseException A custom generic Amadeus error.
      */
-    public AirTraffic[] getMostBookedDestinations(String originCityCode) throws ResponseException {
+    public Destination[] getMostBookedDestinations(String originCityCode) throws ResponseException {
         DateTimeFormatter yearMonthFormatter = DateTimeFormatter.ofPattern("yyyy-MM");
         AirTraffic[] mostBookedDestinations = amadeus.travel.analytics.airTraffic.booked.get(Params
             .with("originCityCode", getAirportName(originCityCode))
             .and("period", LocalDate.now().minusYears(4).format(yearMonthFormatter)));
 
-        // TODO: Make wrapper class and set destination name here
-        
-        return mostBookedDestinations;
+        // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
+
+        Destination[] destinations = Arrays.stream(mostBookedDestinations)
+            .map(airTraffic -> {
+                String cityName = "";
+                String countryCode = "";
+                Address address = getAddress(airTraffic.getDestination());
+                cityName = (address != null) ? address.getCityName() : "";
+                countryCode = (address != null) ? address.getCountryCode() : "";
+                
+                // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+
+                return new Destination(airTraffic.getDestination(), cityName, countryCode);
+            })
+            .toArray(Destination[]::new);
+
+        return destinations;
     }
 
     /**
@@ -116,9 +164,9 @@ public class AmadeusApiService {
         FlightDestination[] flightDestinations = amadeus.shopping.flightDestinations.get(Params
             .with("origin", origin));
 
-        AirTraffic[] mostBookedDestinations = getMostBookedDestinations(origin);
+        Destination[] mostBookedDestinations = getMostBookedDestinations(origin);
         Set<String> mostBookedDestinationsSet = Arrays.stream(mostBookedDestinations)
-                .map(AirTraffic -> AirTraffic.getDestination()).collect(Collectors.toSet());
+                .map(destination -> destination.getCityCode()).collect(Collectors.toSet());
 
         List<FlightDestination> mostBookedDestinationsList = new ArrayList<>();
         List<FlightDestination> otherDestinationsList = new ArrayList<>();
@@ -157,10 +205,16 @@ public class AmadeusApiService {
      * @return Returns an Address object that contains the address details of the city.
      * @throws ResponseException A custom generic Amadeus error.
      */
-     public Address getCityName(String cityCode) throws ResponseException {        
-        Location[] locations = amadeus.referenceData.locations.get(Params
-        .with("keyword", cityCode)
-        .and("subType", "CITY"));
+     public Address getAddress(String cityCode) {        
+        Location[] locations;
+        try {
+            locations = amadeus.referenceData.locations.get(Params
+            .with("keyword", cityCode)
+            .and("subType", "CITY"));
+        } catch (ResponseException e) {
+            e.printStackTrace();
+            return null;
+        }
 
         if (locations.length == 0) {
             return null;
@@ -200,9 +254,7 @@ public class AmadeusApiService {
             .with("latitude", latitude)
             .and("longitude", longitude));
 
-
             return pointsOfInterest;
      }
 
-     
 }

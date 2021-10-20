@@ -1,7 +1,7 @@
 package com.theokont.flightaggregator.controller;
 
 import com.amadeus.exceptions.ResponseException;
-import com.amadeus.resources.AirTraffic;
+import com.theokont.flightaggregator.model.Destination;
 import com.theokont.flightaggregator.service.AmadeusApiService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ public class MostBookedDestinationsController {
      */
     @GetMapping("/api/most-booked-destinations/{origin}")
     @CrossOrigin(origins = "http://localhost:3000")
-    public AirTraffic[] getMostBookedDestinations(@PathVariable String origin) throws ResponseException {
+    public Destination[] getMostBookedDestinations(@PathVariable String origin) throws ResponseException {
         return amadeusApiService.getMostBookedDestinations(origin, "2017-01");
     }
 }
