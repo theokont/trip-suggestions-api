@@ -2,6 +2,7 @@ package com.theokont.flightaggregator.controller;
 
 import com.amadeus.exceptions.ResponseException;
 import com.amadeus.resources.Location.Address;
+import com.theokont.flightaggregator.model.AddressResponse;
 import com.theokont.flightaggregator.service.AmadeusApiService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,8 @@ public class CityNameController {
      */
     @GetMapping("/api/destination-address/{cityCode}")
     @CrossOrigin(origins = "http://localhost:3000")
-    public Address getCityName(@PathVariable String cityCode) throws ResponseException {
-        Address address =  amadeusApiService.getAddress(cityCode);
+    public AddressResponse getCityName(@PathVariable String cityCode) throws ResponseException {
+        AddressResponse address =  amadeusApiService.getAddress(cityCode);
         if (address == null) {
             throw new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Location not found"

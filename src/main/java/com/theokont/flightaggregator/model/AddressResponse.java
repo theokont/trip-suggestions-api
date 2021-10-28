@@ -5,10 +5,9 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class Destination {
+public class AddressResponse {
     
-    String cityCode;
     String cityName;
     String countryCode;
-
+    String status;
 }
