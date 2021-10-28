@@ -216,7 +216,8 @@ public class AmadeusApiService {
             .with("keyword", cityCode)
             .and("subType", "CITY"));
         } catch (ResponseException e) {
-            statusCode = e.getDescription().substring(e.getDescription().indexOf("[") + 1, e.getDescription().indexOf("]"));
+            String errorMsg = e.getDescription();
+            statusCode = errorMsg.substring(errorMsg.indexOf("[") + 1, errorMsg.indexOf("]"));
             e.printStackTrace();
             return new AddressResponse(cityCode, null, statusCode);
         }
