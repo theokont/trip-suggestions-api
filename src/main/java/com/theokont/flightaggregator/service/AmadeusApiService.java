@@ -17,7 +17,6 @@ import com.amadeus.resources.FlightDate;
 import com.amadeus.resources.FlightDestination;
 import com.amadeus.resources.FlightOfferSearch;
 import com.amadeus.resources.Location;
-import com.amadeus.resources.Location.Address;
 import com.amadeus.resources.Location.GeoCode;
 import com.theokont.flightaggregator.model.AddressResponse;
 import com.theokont.flightaggregator.model.DestinationResponse;
@@ -25,7 +24,6 @@ import com.theokont.flightaggregator.model.RankedDestinationPair;
 
 import org.springframework.stereotype.Service;
 
-import ch.qos.logback.core.status.Status;
 
 @Service
 public class AmadeusApiService {

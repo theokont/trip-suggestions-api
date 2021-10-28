@@ -1,7 +1,6 @@
 package com.theokont.flightaggregator.controller;
 
 import com.amadeus.exceptions.ResponseException;
-import com.amadeus.resources.Location.Address;
 import com.theokont.flightaggregator.model.AddressResponse;
 import com.theokont.flightaggregator.service.AmadeusApiService;
 
