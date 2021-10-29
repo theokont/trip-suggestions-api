@@ -29,7 +29,7 @@ public class CityNameController {
      * @return Returns an Address object that contains the address details of the city.
      * @throws ResponseException A custom generic Amadeus error.
      */
-    @GetMapping("/api/destination-address/{cityCode}")
+    @GetMapping("/api/destination-address?city={cityCode}")
     @CrossOrigin(origins = "http://localhost:3000")
     public AddressResponse getCityName(@PathVariable String cityCode) throws ResponseException {
         AddressResponse address =  amadeusApiService.getAddress(cityCode);
