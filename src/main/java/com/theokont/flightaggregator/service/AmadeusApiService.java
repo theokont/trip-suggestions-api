@@ -17,35 +17,39 @@ import com.amadeus.resources.FlightDate;
 import com.amadeus.resources.FlightDestination;
 import com.amadeus.resources.FlightOfferSearch;
 import com.amadeus.resources.Location;
-import com.amadeus.resources.Location.Address;
 import com.amadeus.resources.Location.GeoCode;
-import com.theokont.flightaggregator.model.Destination;
+import com.theokont.flightaggregator.model.AddressResponse;
+import com.theokont.flightaggregator.model.DestinationResponse;
+import com.theokont.flightaggregator.model.LRUCache;
 import com.theokont.flightaggregator.model.RankedDestinationPair;
 
 import org.springframework.stereotype.Service;
+
 
 @Service
 public class AmadeusApiService {
     
     Amadeus amadeus;
+    LRUCache<String, DestinationResponse> destinationAddressCache;
 
     public AmadeusApiService() {
         amadeus = Amadeus
             .builder(System.getenv())
             .build();
+        this.destinationAddressCache = new LRUCache<>(500);
     }
 
     /**
      * Gets the most booked destinations given an origin for a certain time period.
      *
-     * @param originCityCode The city code. Maximum length = 3.
+     * @param originCityName The city code. Maximum length = 3.
      * @param period The time period in YYYY-MM format.
      * @return Returns an array of AirTraffic objects that contains the most booked destinations.
      * @throws ResponseException A custom generic Amadeus error.
      */
-    public Destination[] getMostBookedDestinations(String originCityCode, String period) throws ResponseException {
+    public DestinationResponse[] getMostBookedDestinations(String originCityName, String period) throws ResponseException {
         AirTraffic[] mostBookedDestinations = amadeus.travel.analytics.airTraffic.booked.get(Params
-            .with("originCityCode", getAirportName(originCityCode))
+            .with("originCityCode", getAirportCode(originCityName))
             .and("period", period));
 
         // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
@@ -55,24 +59,9 @@ public class AmadeusApiService {
             e1.printStackTrace();
         }
 
-        Destination[] destinations = Arrays.stream(mostBookedDestinations)
-            .map(airTraffic -> {
-                String cityName = "";
-                String countryCode = "";
-                Address address = getAddress(airTraffic.getDestination());
-                cityName = (address != null) ? address.getCityName() : "";
-                countryCode = (address != null) ? address.getCountryCode() : "";
-                
-                // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e1) {
-                    e1.printStackTrace();
-                }
-
-                return new Destination(airTraffic.getDestination(), cityName, countryCode);
-            })
-            .toArray(Destination[]::new);
+        DestinationResponse[] destinations = Arrays.stream(mostBookedDestinations)
+            .map(airTraffic -> getDestination(airTraffic))
+            .toArray(DestinationResponse[]::new);
         
         return destinations;
     }
@@ -80,14 +69,14 @@ public class AmadeusApiService {
     /**
      * Get the most booked destinations given an origin for the current month 4 years ago (Test environment does not offer recent data).
      *
-     * @param originCityCode The city code. Maximum length = 3.
+     * @param originCityName The city code. Maximum length = 3.
      * @return Returns an array of AirTraffic objects that contains the most booked destinations.
      * @throws ResponseException A custom generic Amadeus error.
      */
-    public Destination[] getMostBookedDestinations(String originCityCode) throws ResponseException {
+    public DestinationResponse[] getMostBookedDestinations(String originCityName) throws ResponseException {
         DateTimeFormatter yearMonthFormatter = DateTimeFormatter.ofPattern("yyyy-MM");
         AirTraffic[] mostBookedDestinations = amadeus.travel.analytics.airTraffic.booked.get(Params
-            .with("originCityCode", getAirportName(originCityCode))
+            .with("originCityCode", getAirportCode(originCityName))
             .and("period", LocalDate.now().minusYears(4).format(yearMonthFormatter)));
 
         // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
@@ -97,26 +86,47 @@ public class AmadeusApiService {
             e1.printStackTrace();
         }
 
-        Destination[] destinations = Arrays.stream(mostBookedDestinations)
-            .map(airTraffic -> {
-                String cityName = "";
-                String countryCode = "";
-                Address address = getAddress(airTraffic.getDestination());
-                cityName = (address != null) ? address.getCityName() : "";
-                countryCode = (address != null) ? address.getCountryCode() : "";
-                
-                // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e1) {
-                    e1.printStackTrace();
-                }
-
-                return new Destination(airTraffic.getDestination(), cityName, countryCode);
-            })
-            .toArray(Destination[]::new);
+        DestinationResponse[] destinations = Arrays.stream(mostBookedDestinations)
+            .map(airTraffic -> getDestination(airTraffic))
+            .toArray(DestinationResponse[]::new);
 
         return destinations;
+    }
+
+    private DestinationResponse getDestination(AirTraffic airTraffic) {
+        if (this.destinationAddressCache.containsKey(airTraffic.getDestination())) {
+            System.out.println(this.destinationAddressCache.get(airTraffic.getDestination()));
+            return this.destinationAddressCache.get(airTraffic.getDestination());
+        }
+        
+        String cityName = "";
+        String countryCode = "";
+        String status = "";
+        AddressResponse address = getAddress(airTraffic.getDestination());
+        
+        // if rate limit is exceeded (error 429), wait for 1 second and retry
+        while (address.getStatus().equals("429")) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            address = getAddress(airTraffic.getDestination());
+        }
+
+        cityName = (address.getCityName() != null) ? address.getCityName() : "";
+        countryCode = (address.getCountryCode() != null) ? address.getCountryCode() : "";
+        status = address.getStatus();
+        
+        // Amadeus API rate limit in test environment is 100ms, so the method waits a bit before making a new API call
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
+        destinationAddressCache.set(airTraffic.getDestination(), new DestinationResponse(airTraffic.getDestination(), cityName, countryCode, status));
+        return new DestinationResponse(airTraffic.getDestination(), cityName, countryCode, status);
     }
 
     /**
@@ -164,7 +174,7 @@ public class AmadeusApiService {
         FlightDestination[] flightDestinations = amadeus.shopping.flightDestinations.get(Params
             .with("origin", origin));
 
-        Destination[] mostBookedDestinations = getMostBookedDestinations(origin);
+        DestinationResponse[] mostBookedDestinations = getMostBookedDestinations(origin);
         Set<String> mostBookedDestinationsSet = Arrays.stream(mostBookedDestinations)
                 .map(destination -> destination.getCityCode()).collect(Collectors.toSet());
 
@@ -205,34 +215,43 @@ public class AmadeusApiService {
      * @return Returns an Address object that contains the address details of the city.
      * @throws ResponseException A custom generic Amadeus error.
      */
-     public Address getAddress(String cityCode) {        
+     public AddressResponse getAddress(String cityCode) {        
         Location[] locations;
+        String statusCode = "200";
         try {
             locations = amadeus.referenceData.locations.get(Params
             .with("keyword", cityCode)
             .and("subType", "CITY"));
         } catch (ResponseException e) {
+            String errorMsg = e.getDescription();
+            statusCode = errorMsg.substring(errorMsg.indexOf("[") + 1, errorMsg.indexOf("]"));
             e.printStackTrace();
-            return null;
+            return new AddressResponse(null, null, statusCode);
         }
 
+        // if locations is empty, then it means that the address was not found in the test environment
         if (locations.length == 0) {
-            return null;
-        } 
+            return new AddressResponse(null, null, "404"); 
+        }
 
-        return locations[0].getAddress();
+        return new AddressResponse(locations[0].getAddress().getCityName(), locations[0].getAddress().getCountryCode(), statusCode);
      }
 
     /**
      * Get the airport name from the given city code.
      * @param cityCode The city code. Max length = 3.
      * @return Returns a String that contains the airport code.
-     * @throws ResponseException A custom generic Amadeus error.
      */
-     public String getAirportName(String cityCode) throws ResponseException {        
-        Location[] locations = amadeus.referenceData.locations.get(Params
-        .with("keyword", cityCode)
-        .and("subType", "CITY,AIRPORT"));
+     public String getAirportCode(String cityName) {        
+        Location[] locations;
+        try {
+            locations = amadeus.referenceData.locations.get(Params
+            .with("keyword", cityName)
+            .and("subType", "CITY,AIRPORT"));
+        } catch (ResponseException e) {
+            e.printStackTrace();
+            return null;
+        }
 
         if (locations.length == 0) {
             return null;
