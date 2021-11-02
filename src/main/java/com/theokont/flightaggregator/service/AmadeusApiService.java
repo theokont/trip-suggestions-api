@@ -20,6 +20,7 @@ import com.amadeus.resources.Location;
 import com.amadeus.resources.Location.GeoCode;
 import com.theokont.flightaggregator.model.AddressResponse;
 import com.theokont.flightaggregator.model.DestinationResponse;
+import com.theokont.flightaggregator.model.LRUCache;
 import com.theokont.flightaggregator.model.RankedDestinationPair;
 
 import org.springframework.stereotype.Service;
@@ -29,11 +30,13 @@ import org.springframework.stereotype.Service;
 public class AmadeusApiService {
     
     Amadeus amadeus;
+    LRUCache<String, DestinationResponse> destinationAddressCache;
 
     public AmadeusApiService() {
         amadeus = Amadeus
             .builder(System.getenv())
             .build();
+        this.destinationAddressCache = new LRUCache<>(500);
     }
 
     /**
@@ -83,7 +86,6 @@ public class AmadeusApiService {
             e1.printStackTrace();
         }
 
-        // TODO: implement caching for the destination Address mapping. 
         DestinationResponse[] destinations = Arrays.stream(mostBookedDestinations)
             .map(airTraffic -> getDestination(airTraffic))
             .toArray(DestinationResponse[]::new);
@@ -92,6 +94,11 @@ public class AmadeusApiService {
     }
 
     private DestinationResponse getDestination(AirTraffic airTraffic) {
+        if (this.destinationAddressCache.containsKey(airTraffic.getDestination())) {
+            System.out.println(this.destinationAddressCache.get(airTraffic.getDestination()));
+            return this.destinationAddressCache.get(airTraffic.getDestination());
+        }
+        
         String cityName = "";
         String countryCode = "";
         String status = "";
@@ -118,7 +125,7 @@ public class AmadeusApiService {
         } catch (InterruptedException e1) {
             e1.printStackTrace();
         }
-
+        destinationAddressCache.set(airTraffic.getDestination(), new DestinationResponse(airTraffic.getDestination(), cityName, countryCode, status));
         return new DestinationResponse(airTraffic.getDestination(), cityName, countryCode, status);
     }
 
